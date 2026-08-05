@@ -163,3 +163,44 @@ function resetMainPlotZoom() {
         'yaxis.range': [ZOOM_DEFAULT.yMin, ZOOM_DEFAULT.yMax]
     });
 }
+
+// ── Cp (Pressure Coefficient) Plot ──────────────────────────────────────────
+function initCpPlot() {
+    const data = [
+        { x: [], y: [], name: '-Cp Upper', mode: 'lines', line: { color: colorAmber, width: 2 } },
+        { x: [], y: [], name: '-Cp Lower', mode: 'lines', line: { color: colorCyan,  width: 2 } },
+    ];
+    const layout = {
+        margin: { t: 20, b: 48, l: 54, r: 20 },
+        paper_bgcolor: 'transparent',
+        plot_bgcolor:  'transparent',
+        showlegend: true,
+        legend: { font: { color: colorMuted, size: 11 }, orientation: 'h', y: -0.22 },
+        xaxis: {
+            title: 'x/c',
+            gridcolor: colorGrid,
+            zerolinecolor: colorGrid,
+            tickfont: { color: colorMuted, family: 'JetBrains Mono' },
+            titlefont: { color: colorMuted },
+            range: [0, 1]
+        },
+        yaxis: {
+            title: '−Cp',
+            autorange: 'reversed',          // convention: suction (-Cp) plotted upward
+            gridcolor: colorGrid,
+            zerolinecolor: colorGrid,
+            tickfont: { color: colorMuted, family: 'JetBrains Mono' },
+            titlefont: { color: colorMuted },
+        }
+    };
+    Plotly.newPlot('plot-cp', data, layout, { displayModeBar: false, responsive: true });
+}
+
+function updateCpPlot(result) {
+    if (!document.getElementById('plot-cp').data) return;
+    Plotly.update('plot-cp', {
+        x: [result.x_upper, result.x_lower],
+        y: [result.Cp_upper.map(v => -v), result.Cp_lower.map(v => -v)]
+    }, {}, [0, 1]);
+}
+

@@ -10,13 +10,16 @@ let state = {
     lockRle: false,
     lockTeGap: false,
     modeStSc: false,
-    importedPts: null
+    importedPts: null,
+    alpha: 0.0
 };
 
 function initUI() {
     initGeometryPlot();
     initDerivativesPlot();
     initResidualsPlot();
+    initCpPlot();
+    initSolver();
     
     document.getElementById('n1-slider').addEventListener('input', (e) => {
         state.N1 = parseFloat(e.target.value);
@@ -175,6 +178,51 @@ function initUI() {
 
     renderWeightSliders();
     updateAll();
+}
+
+// ── Solver wiring ────────────────────────────────────────────────────────────
+function initSolver() {
+    const alphaSlider = document.getElementById('alpha-slider');
+    const alphaNum    = document.getElementById('alpha-num');
+
+    alphaSlider.addEventListener('input', (e) => {
+        state.alpha = parseFloat(e.target.value);
+        alphaNum.value = state.alpha.toFixed(1);
+        if (document.getElementById('solver-auto').checked) runAndUpdateSolver();
+    });
+
+    alphaNum.addEventListener('change', (e) => {
+        state.alpha = parseFloat(e.target.value);
+        alphaSlider.value = state.alpha;
+        if (document.getElementById('solver-auto').checked) runAndUpdateSolver();
+    });
+
+    document.getElementById('btn-run-solver').addEventListener('click', () => {
+        runAndUpdateSolver();
+    });
+}
+
+function runAndUpdateSolver() {
+    const statusEl = document.getElementById('solver-status');
+    const geom = computeGeometry(state.n, state.N1, state.N2, state.Au, state.Al, state.dzTE_U, state.dzTE_L);
+    try {
+        statusEl.textContent = 'Running…';
+        statusEl.style.color = 'var(--text-muted)';
+        const result = runSolver(geom, state.alpha);
+        document.getElementById('out-cl').value = result.Cl.toFixed(4);
+        document.getElementById('out-cm').value = result.Cm_qc.toFixed(4);
+        updateCpPlot(result);
+        // Switch to Cp tab automatically if not already there
+        const cpTab = document.querySelector('[data-target="tab-cp"]');
+        if (cpTab && !cpTab.classList.contains('active')) {
+            cpTab.click();
+        }
+        statusEl.textContent = `α=${state.alpha.toFixed(1)}° • inviscid panel method`;
+        statusEl.style.color = 'var(--accent-cyan)';
+    } catch (err) {
+        statusEl.textContent = 'Error: ' + err.message;
+        statusEl.style.color = 'var(--accent-red)';
+    }
 }
 
 // ── NACA 4-digit generator ───────────────────────────────────────────────────
@@ -361,6 +409,11 @@ function updateAll() {
         </tr>`;
     }
     tbody.innerHTML = rowsHtml;
+
+    // Re-run solver if auto mode is on
+    if (document.getElementById('solver-auto') && document.getElementById('solver-auto').checked) {
+        runAndUpdateSolver();
+    }
 }
 
 document.addEventListener('DOMContentLoaded', initUI);
