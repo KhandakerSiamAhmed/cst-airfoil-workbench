@@ -1,0 +1,72 @@
+import { computeGeometry } from '../js/cst-math.js';
+import { fitCST } from '../js/fitter.js';
+
+function yt(x) {
+    return 5 * 0.12 * (0.2969 * Math.sqrt(x) - 0.1260 * x - 0.3516 * x*x + 0.2843 * x*x*x - 0.1015 * x*x*x*x);
+}
+
+let pts = { upper: [], lower: [] };
+for (let i = 0; i <= 200; i++) {
+    let x = 0.5 * (1 - Math.cos(Math.PI * i / 200));
+    let z = yt(x);
+    pts.upper.push({ x, z });
+    pts.lower.push({ x, -z });
+}
+
+let n = 8;
+let N1 = 0.5;
+let N2 = 1.0;
+
+let Au = fitCST(pts.upper, N1, N2, n);
+let Al = fitCST(pts.lower, N1, N2, n);
+
+let geom = computeGeometry(n, N1, N2, Au, Al, 0, 0, 200);
+
+let failures = 0;
+function assert(condition, message) {
+    if (condition) {
+        console.log(`[PASS] ${message}`);
+    } else {
+        console.error(`[FAIL] ${message}`);
+        failures++;
+    }
+}
+
+let sumSqU = 0, sumSqL = 0;
+for (let i = 0; i <= 200; i++) {
+    let exact_z = yt(geom.psi[i]);
+    sumSqU += Math.pow(geom.zeta_U[i] - exact_z, 2);
+    sumSqL += Math.pow(geom.zeta_L[i] - (-exact_z), 2);
+}
+let rms = Math.sqrt((sumSqU + sumSqL) / 402);
+assert(rms < 1e-4, `RMS residual < 1e-4 (actual: ${rms.toExponential(3)})`);
+
+assert(Math.abs(geom.max_t - 0.12) < 0.001, `Max thickness near 0.12 (actual: ${geom.max_t.toFixed(4)})`);
+assert(Math.abs(geom.max_t_x - 0.30) < 0.02, `Max thickness location near 0.30 (actual: ${geom.max_t_x.toFixed(4)})`);
+
+let symmetryPass = true;
+for (let i = 0; i <= n; i++) {
+    if (Math.abs(Al[i] + Au[i]) > 1e-3) {
+        symmetryPass = false;
+        break;
+    }
+}
+assert(symmetryPass, `Symmetry preserved (Al ≈ -Au)`);
+
+let noNanInf = true;
+let arrays = [geom.zeta_U, geom.zeta_L, geom.dZdx_U, geom.dZdx_L, geom.d2Zdx2_U, geom.d2Zdx2_L, geom.kappa_U, geom.kappa_L];
+for (let arr of arrays) {
+    for (let val of arr) {
+        if (isNaN(val) || !isFinite(val)) {
+            noNanInf = false;
+            break;
+        }
+    }
+}
+assert(noNanInf, `No NaN or Infinity values in arrays`);
+
+assert(geom.R_LE_U > 0 && geom.R_LE_U < 0.05, `R_LE within bounds (actual: ${geom.R_LE_U.toFixed(5)})`);
+
+if (failures > 0) {
+    process.exit(1);
+}

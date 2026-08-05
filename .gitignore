@@ -1,0 +1,8 @@
+# Dependencies & OS files
+node_modules/
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+*.png
+test.mjs
