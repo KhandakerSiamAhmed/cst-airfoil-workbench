@@ -112,6 +112,44 @@
             height: 100%;
         }
 
+        .zoom-controls {
+            position: absolute;
+            top: 24px;
+            right: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 10;
+        }
+
+        .zoom-btn {
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            line-height: 1;
+            background-color: var(--surface-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: color 0.15s, border-color 0.15s;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .zoom-btn:hover {
+            color: var(--accent-cyan);
+            border-color: var(--accent-cyan);
+        }
+
+        .zoom-btn-reset {
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
         .tabs-container {
             height: 250px;
             border-top: 1px solid var(--border);
@@ -260,9 +298,14 @@
             <span class="font-semibold text-lg">CST Airfoil Workbench v1.0</span>
             <select id="preset-select" class="ml-4">
                 <option value="custom">Custom</option>
-                <option value="naca0012">NACA 0012</option>
+                <option value="naca">NACA 4-digit</option>
                 <option value="rae2822">RAE 2822</option>
             </select>
+            <div id="naca-input-group" style="display:none;" class="flex items-center gap-1">
+                <span style="color:var(--text-muted);font-size:11px;font-family:'JetBrains Mono',monospace;">NACA</span>
+                <input type="text" id="naca-digits" placeholder="0012" maxlength="4"
+                       class="font-mono" style="width:56px;letter-spacing:3px;text-align:center;">
+            </div>
         </div>
         <div class="flex items-center gap-2">
             <input type="file" id="file-import" accept=".dat,.txt" style="display:none">
@@ -271,6 +314,7 @@
                 <option value="dat">Export UIUC (.dat)</option>
                 <option value="csv">Export CSV (.csv)</option>
                 <option value="dxf">Export DXF (.dxf)</option>
+                <option value="sldcrv">Export SolidWorks (.sldcrv)</option>
             </select>
             <button id="btn-export">Export</button>
         </div>
@@ -361,6 +405,11 @@
         <div class="viewport">
             <div class="plot-container">
                 <div id="main-plot"></div>
+                <div class="zoom-controls">
+                    <button class="zoom-btn" id="btn-zoom-in" title="Zoom In">+</button>
+                    <button class="zoom-btn" id="btn-zoom-out" title="Zoom Out">&minus;</button>
+                    <button class="zoom-btn zoom-btn-reset" id="btn-zoom-reset" title="Reset Zoom">&#8635;</button>
+                </div>
             </div>
 
             <div class="tabs-container">

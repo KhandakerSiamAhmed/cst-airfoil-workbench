@@ -86,12 +86,32 @@ function exportDXF(psi, zeta_U, zeta_L) {
         pts.push({x: psi[i], y: zeta_L[i]});
     }
     
-    let dxf = `  0\nSECTION\n  2\nENTITIES\n  0\nLWPOLYLINE\n  8\n0\n 90\n${pts.length}\n 70\n0\n`;
+    // 70=1 → closed polyline so SolidWorks treats it as a closed sketch profile
+    let dxf = `  0\nSECTION\n  2\nENTITIES\n  0\nLWPOLYLINE\n  8\n0\n 90\n${pts.length}\n 70\n1\n`;
     for (let p of pts) {
         dxf += ` 10\n${p.x.toFixed(6)}\n 20\n${p.y.toFixed(6)}\n`;
     }
     dxf += `  0\nENDSEC\n  0\nEOF\n`;
     return dxf;
+}
+
+// SolidWorks Curve Through XYZ Points format (.sldcrv)
+// Workflow in SolidWorks:
+//   Insert > Curve > Curve Through XYZ Points > select this file
+//   The curve appears as a closed spline feature.
+//   To extrude: create a sketch on the desired plane,
+//   use Convert Entities to project the curve into the sketch, then extrude.
+function exportSLDCRV(psi, zeta_U, zeta_L) {
+    // Build closed loop: TE -> upper surface -> LE -> lower surface -> TE
+    let out = '';
+    for (let i = psi.length - 1; i >= 0; i--) {
+        out += `${psi[i].toFixed(6)}\t${zeta_U[i].toFixed(6)}\t0.000000\n`;
+    }
+    // Skip LE (already written) and walk back to TE along lower surface
+    for (let i = 1; i < psi.length; i++) {
+        out += `${psi[i].toFixed(6)}\t${zeta_L[i].toFixed(6)}\t0.000000\n`;
+    }
+    return out;
 }
 
 function downloadFile(filename, content) {

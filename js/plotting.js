@@ -37,10 +37,11 @@ function initGeometryPlot() {
             range: [-0.25, 0.25]
         },
         showlegend: false,
-        hovermode: 'closest'
+        hovermode: 'closest',
+        dragmode: 'pan'
     };
 
-    Plotly.newPlot('main-plot', data, layout, {displayModeBar: false, responsive: true});
+    Plotly.newPlot('main-plot', data, layout, {displayModeBar: false, responsive: true, scrollZoom: true});
 }
 
 function updateGeometryPlot(geom, importedPts = null) {
@@ -123,4 +124,42 @@ function updateResidualsPlot(resU, resL) {
     if (document.getElementById('plot-residuals').data) {
         Plotly.update('plot-residuals', update, {}, [0, 1]);
     }
+}
+
+// ── Zoom helpers for main-plot ──────────────────────────────────────────────
+const ZOOM_DEFAULT = { xMin: -0.05, xMax: 1.05, yMin: -0.25, yMax: 0.25 };
+const ZOOM_FACTOR  = 0.25; // fraction to shrink/expand per step
+
+function _getMainPlotRange() {
+    const el = document.getElementById('main-plot');
+    if (!el || !el.layout) return { ...ZOOM_DEFAULT };
+    const xl = el.layout.xaxis || {};
+    const yl = el.layout.yaxis || {};
+    return {
+        xMin: (xl.range || [ZOOM_DEFAULT.xMin, ZOOM_DEFAULT.xMax])[0],
+        xMax: (xl.range || [ZOOM_DEFAULT.xMin, ZOOM_DEFAULT.xMax])[1],
+        yMin: (yl.range || [ZOOM_DEFAULT.yMin, ZOOM_DEFAULT.yMax])[0],
+        yMax: (yl.range || [ZOOM_DEFAULT.yMin, ZOOM_DEFAULT.yMax])[1]
+    };
+}
+
+function zoomMainPlot(direction) {
+    // direction: +1 = zoom in, -1 = zoom out
+    let { xMin, xMax, yMin, yMax } = _getMainPlotRange();
+    const xCtr = (xMin + xMax) / 2;
+    const yCtr = (yMin + yMax) / 2;
+    const xHalf = (xMax - xMin) / 2;
+    const yHalf = (yMax - yMin) / 2;
+    const scale = direction > 0 ? (1 - ZOOM_FACTOR) : (1 + ZOOM_FACTOR);
+    Plotly.relayout('main-plot', {
+        'xaxis.range': [xCtr - xHalf * scale, xCtr + xHalf * scale],
+        'yaxis.range': [yCtr - yHalf * scale, yCtr + yHalf * scale]
+    });
+}
+
+function resetMainPlotZoom() {
+    Plotly.relayout('main-plot', {
+        'xaxis.range': [ZOOM_DEFAULT.xMin, ZOOM_DEFAULT.xMax],
+        'yaxis.range': [ZOOM_DEFAULT.yMin, ZOOM_DEFAULT.yMax]
+    });
 }

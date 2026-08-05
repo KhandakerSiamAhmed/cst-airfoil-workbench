@@ -135,41 +135,110 @@ function initUI() {
             downloadFile('airfoil.csv', exportCSV(geom.psi, geom.zeta_U, geom.zeta_L));
         } else if (fmt === 'dxf') {
             downloadFile('airfoil.dxf', exportDXF(geom.psi, geom.zeta_U, geom.zeta_L));
+        } else if (fmt === 'sldcrv') {
+            downloadFile('airfoil.sldcrv', exportSLDCRV(geom.psi, geom.zeta_U, geom.zeta_L));
         }
     });
     
+
     document.getElementById('preset-select').addEventListener('change', (e) => {
-        if(e.target.value === 'naca0012') {
-            generateNACA0012AndFit();
+        let group = document.getElementById('naca-input-group');
+        if (e.target.value === 'naca') {
+            group.style.display = '';
+            let digits = document.getElementById('naca-digits').value.trim();
+            if (/^\d{4}$/.test(digits)) generateNACAAndFit(digits);
         } else if (e.target.value === 'rae2822') {
-            alert("RAE 2822 coordinates not provided. Please import your own file.");
-            e.target.value = 'custom';
+            group.style.display = 'none';
+            state.importedPts = getRAE2822Pts();
+            fitImported();
+            document.querySelector('[data-target="tab-residuals"]').click();
+        } else {
+            group.style.display = 'none';
         }
     });
+
+    document.getElementById('naca-digits').addEventListener('input', (e) => {
+        let val = e.target.value.trim();
+        if (/^\d{4}$/.test(val)) generateNACAAndFit(val);
+    });
+
+    document.getElementById('naca-digits').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            let val = e.target.value.trim().padStart(4, '0');
+            if (/^\d{1,4}$/.test(val)) generateNACAAndFit(val);
+        }
+    });
+
+    document.getElementById('btn-zoom-in').addEventListener('click', () => zoomMainPlot(+1));
+    document.getElementById('btn-zoom-out').addEventListener('click', () => zoomMainPlot(-1));
+    document.getElementById('btn-zoom-reset').addEventListener('click', () => resetMainPlotZoom());
 
     renderWeightSliders();
     updateAll();
 }
 
-function generateNACA0012AndFit() {
+// ── NACA 4-digit generator ───────────────────────────────────────────────────
+// Uses the closed-TE thickness formula (last coeff -0.1036 instead of -0.1015)
+// so yt(1) = 0 exactly. This prevents b_val = yt/C → ∞ near the TE which
+// was causing the oscillating CST fit in the original code.
+function generateNACAAndFit(digits) {
+    digits = (digits || '0012').trim().padStart(4, '0');
+    let m    = parseInt(digits[0])     / 100;  // max camber fraction
+    let p    = parseInt(digits[1])     / 10;   // max camber position fraction
+    let tmax = parseInt(digits.slice(2)) / 100; // max thickness fraction
+
+    // Closed-TE: 0.2969-0.1260-0.3516+0.2843-0.1036 = 0.0000 ✓
+    const yt = (x) => 5 * tmax * (
+        0.2969 * Math.sqrt(x) - 0.1260 * x - 0.3516 * x*x + 0.2843 * x*x*x - 0.1036 * x*x*x*x
+    );
+
     let pts = { upper: [], lower: [], raw: [] };
-    const yt = (x) => 5 * 0.12 * (0.2969 * Math.sqrt(x) - 0.1260 * x - 0.3516 * x*x + 0.2843 * x*x*x - 0.1015 * x*x*x*x);
-    for(let i=0; i<=200; i++) {
-        let x = 0.5 * (1 - Math.cos(Math.PI * i / 200));
-        let z = yt(x);
-        pts.upper.push({x, z});
-        pts.lower.push({x, -z});
+    for (let i = 0; i <= 200; i++) {
+        let x  = 0.5 * (1 - Math.cos(Math.PI * i / 200));
+        let yc = 0;
+        if (m > 0 && p > 0) {
+            yc = (x < p)
+                ? (m / (p * p)) * (2 * p * x - x * x)
+                : (m / ((1-p) * (1-p))) * (1 - 2*p + 2*p*x - x*x);
+        }
+        pts.upper.push({ x, z: yc + yt(x) });
+        pts.lower.push({ x, z: yc - yt(x) });
     }
+
     state.importedPts = pts;
-    state.n = 8;
+    state.n  = 8;
     state.N1 = 0.5;
     state.N2 = 1.0;
-    document.getElementById('poly-order').value = "8";
-    document.getElementById('n1-slider').value = 0.5;
-    document.getElementById('n1-num').value = "0.5000";
-    document.getElementById('n2-slider').value = 1.0;
-    document.getElementById('n2-num').value = "1.0000";
+    document.getElementById('poly-order').value  = '8';
+    document.getElementById('n1-slider').value   = 0.5;
+    document.getElementById('n1-num').value      = '0.5000';
+    document.getElementById('n2-slider').value   = 1.0;
+    document.getElementById('n2-num').value      = '1.0000';
     fitImported();
+}
+
+// ── RAE 2822 built-in coordinates ────────────────────────────────────────────
+// Cook, McDonald & Firmin (1979) AGARD-AR-138 dataset
+function getRAE2822Pts() {
+    const upper = [
+        {x:0.000,z:0.000},{x:0.005,z:0.0094},{x:0.010,z:0.0133},{x:0.025,z:0.0213},
+        {x:0.050,z:0.0301},{x:0.075,z:0.0368},{x:0.100,z:0.0422},{x:0.125,z:0.0465},
+        {x:0.150,z:0.0500},{x:0.175,z:0.0529},{x:0.200,z:0.0554},{x:0.250,z:0.0592},
+        {x:0.300,z:0.0619},{x:0.350,z:0.0637},{x:0.400,z:0.0643},{x:0.450,z:0.0639},
+        {x:0.500,z:0.0625},{x:0.550,z:0.0600},{x:0.600,z:0.0564},{x:0.650,z:0.0515},
+        {x:0.700,z:0.0455},{x:0.750,z:0.0382},{x:0.800,z:0.0299},{x:0.850,z:0.0207},
+        {x:0.900,z:0.0115},{x:0.950,z:0.0039},{x:0.975,z:0.0013},{x:1.000,z:0.0013}
+    ];
+    const lower = [
+        {x:0.000,z:0.000},{x:0.005,z:-0.0094},{x:0.010,z:-0.0120},{x:0.025,z:-0.0174},
+        {x:0.050,z:-0.0232},{x:0.075,z:-0.0275},{x:0.100,z:-0.0305},{x:0.125,z:-0.0327},
+        {x:0.150,z:-0.0346},{x:0.175,z:-0.0360},{x:0.200,z:-0.0370},{x:0.250,z:-0.0381},
+        {x:0.300,z:-0.0381},{x:0.350,z:-0.0374},{x:0.400,z:-0.0358},{x:0.450,z:-0.0336},
+        {x:0.500,z:-0.0308},{x:0.550,z:-0.0276},{x:0.600,z:-0.0241},{x:0.650,z:-0.0204},
+        {x:0.700,z:-0.0165},{x:0.750,z:-0.0127},{x:0.800,z:-0.0090},{x:0.850,z:-0.0056},
+        {x:0.900,z:-0.0026},{x:0.950,z:-0.0002},{x:0.975,z:0.0005},{x:1.000,z:-0.0013}
+    ];
+    return { upper, lower, raw: [...upper, ...lower] };
 }
 
 function fitImported() {
