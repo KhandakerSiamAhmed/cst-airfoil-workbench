@@ -1,34 +1,24 @@
 # CST Airfoil Workbench
 
-A client-side single-page application for interactively designing airfoil geometry using the Class-Shape Transformation (CST) parameterization method.
+A browser application for interactive airfoil geometry design using the Class-Shape Transformation (CST) parameterization method.
 
-## How to open it
+## How to use
 
-Simply open the `index.html` file in any modern web browser. No local web server or build process is required for the application to function.
-- On Windows: Double click `index.html` or drag it into Chrome/Edge/Firefox.
+Open `index.html` in a web browser. The application runs locally in the browser and requires no installation or server.
 
-## How to run the test scripts
+## Features
 
-The project includes two self-verification scripts in the `test/` folder that require Node.js.
+- Control Class function variables (N1, N2) and Shape function variables (order and surface weights).
+- Switch between direct upper/lower surface generation and Thickness/Camber (ST/SC) modes.
+- Apply geometry constraints such as locked leading-edge radius or trailing-edge gaps.
+- Import existing airfoil coordinates from `.dat` or `.txt` files to analyze or match their shapes.
+- Export your generated airfoil geometries to `.dat`, `.csv`, `.dxf`, or `.sldcrv` formats.
+- Inspect the resulting shapes through visual plots of the geometry, derivatives, and fit residuals, alongside a table of coordinates.
 
-### Analytical Math Validation
-1. Ensure Node.js is installed.
-2. Open a terminal in the project root.
-3. Run:
-   ```bash
-   node test/validate-math.mjs
-   ```
-   This will run the internal least-squares fitter against the exact NACA 0012 analytical thickness formula and assert numerical bounds on geometry and derivatives.
+## User Interface
 
-### Graphical UI Validation
-1. Ensure Node.js is installed.
-2. Initialize the project and install Playwright (required once):
-   ```bash
-   npm init -y
-   npm install -D playwright
-   ```
-3. Run:
-   ```bash
-   node test/validate-ui.mjs
-   ```
-   This headless test will load the app, verify there are no console errors, check Plotly initialization, interact with sliders, and save visual verification screenshots (`verification_custom.png` and `verification_naca0012.png`).
+- **Top Bar:** Load predefined shapes (like NACA 4-digit series), import files, and export the current design.
+- **Left Dock:** Contains sliders and inputs for all CST variables and constraints. 
+- **Main Viewport:** Provides a plot of the geometry. Use the zoom controls in the corner to inspect specific areas.
+- **Bottom Tabs:** Switch the main view between the primary geometry plot, slopes and curvature, residuals, and the raw coordinate data table.
+- **Bottom HUD:** Displays live aerodynamic characteristics like thickness-to-chord ratio (t/c), camber (h/c), leading-edge radius (R_LE), and trailing-edge angles (Beta).
