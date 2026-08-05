@@ -2,9 +2,11 @@
 
 A browser application for interactive airfoil geometry design using the Class-Shape Transformation (CST) parameterization method.
 
+**Live application:** [https://khandakersiamahmed.github.io/cst-airfoil-workbench/](https://khandakersiamahmed.github.io/cst-airfoil-workbench/)
+
 ## How to use
 
-Open `index.html` in a web browser. The application runs locally in the browser and requires no installation or server.
+Open the live application link in a web browser, or open `index.html` locally. The application runs entirely in the browser and requires no installation or server.
 
 ## Features
 
